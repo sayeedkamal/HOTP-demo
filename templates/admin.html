@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin Panel - HOTP MultiOTP</title>
+<style>
+body { font-family: Arial; background: #f9f9f9; margin: 20px; }
+form, table { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+input[type="text"] { padding: 6px; margin-right: 10px; border-radius: 4px; border: 1px solid #ccc; }
+button { padding: 6px 12px; border: none; border-radius: 4px; background-color: #28a745; color: white; cursor: pointer; }
+button:hover { background-color: #218838; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+th, td { padding: 10px; text-align: center; border: 1px solid #ccc; }
+th { background-color: #f4f4f4; }
+tr:hover { background-color: #f1f1f1; }
+.resync { background-color: #f8d7da; }
+.drift { background-color: #fff3cd; }
+.ok { background-color: #d4edda; }
+hr { border: none; border-top: 1px solid #ddd; margin: 30px 0; }
+h3 { margin-top: 30px; }
+</style>
+</head>
+<body>
+
+<h2>🔧 Admin Panel - HOTP Management</h2>
+
+<!-- Add User Form -->
+<form method="POST" action="/add_user">
+    <input type="text" name="username" placeholder="Username" required>
+    <input type="text" name="secret" placeholder="HEX Secret" required>
+    <button type="submit">Add User</button>
+</form>
+
+<hr>
+
+<!-- Users Table -->
+<table>
+<tr>
+    <th>ID</th>
+    <th>Username</th>
+    <th>Secret (HEX)</th>
+    <th>Server Counter</th>
+    <th>Key Counter</th>
+    <th>Resync?</th>
+    <th>Delete</th>
+</tr>
+{% for user in users %}
+<tr class="{% if user.resync %}resync{% elif user.drift > 0 %}drift{% else %}ok{% endif %}">
+    <td>{{ user.id }}</td>
+    <td>{{ user.username }}</td>
+    <td>{{ user.secret_hex }}</td>
+    <td>{{ user.counter }}</td>
+    <td>{{ user.key_counter }}</td>
+    <td>
+        {% if user.resync %}♻️ Reset secret on server and key
+        {% elif user.drift > 0 %}⚠️ Drift +{{ user.drift }}
+        {% else %}❌ Not Required
+        {% endif %}
+    </td>
+    <td>
+        <a href="/delete_user/{{ user.id }}">🗑️</a>
+    </td>
+</tr>
+{% endfor %}
+</table>
+
+<hr>
+
+<!-- Last 10 OTP Logs -->
+<h3>📝 Last 10 OTP Logs</h3>
+<ul>
+{% for log in otp_logs %}
+    <li>{{ log }}</li>
+{% else %}
+    <li>No OTP logs yet.</li>
+{% endfor %}
+</ul>
+
+<hr>
+
+<!-- HOTP Info Table -->
+<h3>ℹ️ HOTP Security Information</h3>
+<table>
+<tr>
+    <th>Status</th>
+    <th>Meaning</th>
+    <th>Admin Action</th>
+    <th>Security Impact</th>
+</tr>
+<tr>
+    <td>⚠️ Drift</td>
+    <td>Minor mismatch between server and device counters</td>
+    <td>Track drift, allow OTP verification</td>
+    <td>Maintains usability without compromising security</td>
+</tr>
+<tr>
+    <td>🔄 Resync</td>
+    <td>Major mismatch; OTP too far ahead or invalid</td>
+    <td>Reset server counter to device counter</td>
+    <td>Restores functionality for legitimate users</td>
+</tr>
+<tr>
+    <td>♻️ Reset Security Key</td>
+    <td>Secret compromised or unrecoverable drift</td>
+    <td>Generate new secret, reset counters</td>
+    <td>Ensures OTPs cannot be predicted or reused by attackers</td>
+</tr>
+</table>
+
+</body>
+</html>
